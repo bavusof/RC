@@ -7,6 +7,7 @@ import jokempo.jogo.Jogo;
 import jokempo.jogo.Jogada;
 import jokempo.jogo.Rodada;
 import jokempo.utils.Mensagens;
+import jokempo.utils.Timeout;
 
 //classe para gerenciar cada cliente conectado em uma thread separada, possibilitando múltiplos jogadores
 public class Gerenciador implements Runnable{
@@ -19,12 +20,13 @@ public class Gerenciador implements Runnable{
 	private static Jogada jogadaplayer2;	//armazena as jogadas do jogador 2
 	private static PrintWriter msgplayer1;	//enviar mensagens específicas para um cliente
 	private static PrintWriter msgplayer2;	//enviar mensagens específicas para outro cliente
-    private static final int TIMEOUT = 75000;   //timeout - tempo para enviar jogada
-
+    private static final long TIMEOUT = 60000;   //timeout - tempo para enviar jogada
+    private static Timeout timeoutPlayer1; // Timeout para o jogador 1
+    private static Timeout timeoutPlayer2; // Timeout para o jogador 2
+    
 	public Gerenciador (Socket socket) {
         this.clienteSocket = socket;
         try {
-            clienteSocket.setSoTimeout(TIMEOUT);
             in = new BufferedReader(new InputStreamReader(clienteSocket.getInputStream()));
             out = new PrintWriter(clienteSocket.getOutputStream(), true);
             conectarJogador(out);
@@ -56,7 +58,7 @@ public class Gerenciador implements Runnable{
                 }
             }
         } catch (SocketTimeoutException e) {
-        	timeout();
+        	timeoutAction();
         } catch (IOException e) {
             if (!clienteSocket.isClosed()) {
                 System.err.println(Mensagens.X_COMUN + e.getMessage());
@@ -66,30 +68,38 @@ public class Gerenciador implements Runnable{
         }
     }
 	
-	private void timeout(){
-        System.out.println(Mensagens.TIMEOUT + (TIMEOUT / 1000) + Mensagens.SEGUNDOS);
+	//méotodo que diz o que acontece quando dá timeout
+    private void timeoutAction() {
+    	System.out.println(Mensagens.CLIENTE + playerid + Mensagens.TIMEOUT + (TIMEOUT / 1000) + Mensagens.SEGUNDOS);
         if (playerid == 1) {
             msgplayer1.println(Mensagens.INATIVIDADE);
-            msgplayer1.println(Mensagens.FIMDEJOGO);
             msgplayer2.println(Mensagens.INATIVIDADE2);
-            msgplayer2.println(Mensagens.FIMDEJOGO);
         } else if (playerid == 2) {
             msgplayer2.println(Mensagens.INATIVIDADE);
-            msgplayer2.println(Mensagens.FIMDEJOGO);
             msgplayer1.println(Mensagens.INATIVIDADE2);
-            msgplayer1.println(Mensagens.FIMDEJOGO);
+        }        
+        
+        // atraso de 1 segundo para dar tempo de as mensagens chegarem
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
-        ServidorJokempo.removeBothClients();  
-	}
+        ServidorJokempo.removeBothClients(); 
+    }
 	
 	//método para comunicar os clientes sobre a existência (ou não) da jogada do seu adversário
 	private void comunicarEspera() {
 	    if (playerid == 1) {
-	        if (jogadaplayer2 == null) msgplayer1.println(Mensagens.WAIT);
-	        if (msgplayer2 != null && jogadaplayer2 == null) msgplayer2.println(Mensagens.WAIT2);
+	        if (jogadaplayer2 == null) {
+	        	msgplayer1.println(Mensagens.WAIT);
+	        	if (msgplayer2 != null) msgplayer2.println(Mensagens.WAIT2);
+	        }
 	    } else {
-	        if (jogadaplayer1 == null) msgplayer2.println(Mensagens.WAIT);
-	        if (msgplayer1 != null && jogadaplayer1 == null) msgplayer1.println(Mensagens.WAIT2);
+	        if (jogadaplayer1 == null) {
+	        	msgplayer2.println(Mensagens.WAIT);
+	       	if (msgplayer1 != null) msgplayer1.println(Mensagens.WAIT2);
+	        }
 	    }
 	}
 	
@@ -99,9 +109,11 @@ public class Gerenciador implements Runnable{
 	    synchronized (jogo) {
 	        if (playerid == 1 && jogadaplayer1 == null) {
 	            jogadaplayer1 = jogadaplayer;
+	            timeoutPlayer1.reset();
 	            comunicarEspera();
 	        } else if (playerid == 2 && jogadaplayer2 == null) {
 	            jogadaplayer2 = jogadaplayer;
+	            timeoutPlayer2.reset();
 	            comunicarEspera();
 	        }
 	    }
@@ -114,6 +126,8 @@ public class Gerenciador implements Runnable{
         enviaResultadoSv(resultadoplayer1, resultadoplayer2);
         enviaResultado(msgplayer1, resultadoplayer1);
         enviaResultado(msgplayer2, resultadoplayer2);
+        timeoutPlayer1.reset();
+        timeoutPlayer2.reset();
 	}
 	
 	//método para resetar as jogadas para a próxima rodada
@@ -128,14 +142,18 @@ public class Gerenciador implements Runnable{
             if (msgplayer1 == null) {
                 msgplayer1 = out;
                 playerid = 1;
+                timeoutPlayer1 = new Timeout(clienteSocket, TIMEOUT, this::timeoutAction);
                 msgplayer1.println(Mensagens.CONEC1);
             } else if (msgplayer2 == null) {
                 msgplayer2 = out;
                 playerid = 2;
+                timeoutPlayer2 = new Timeout(clienteSocket, TIMEOUT, this::timeoutAction);
                 msgplayer2.println(Mensagens.CONEC2);
                 msgplayer2.println(Mensagens.STARTGAME);
+                msgplayer2.println(Mensagens.INFORMATIVO);
                 msgplayer1.println(Mensagens.CONECATT);
                 msgplayer1.println(Mensagens.STARTGAME);
+                msgplayer1.println(Mensagens.INFORMATIVO);
                 System.out.println(Mensagens.START);
                 solicitarJogada();
             }
@@ -171,9 +189,11 @@ public class Gerenciador implements Runnable{
         int placarPlayer1 = jogo.getPontosplayer1();
         int placarPlayer2 = jogo.getPontosplayer2();
         if (msgplayer1 != null) {
+        	timeoutPlayer1.start();
             enviarSolicitacaoDeJogada(msgplayer1, placarPlayer1, placarPlayer2, rodadaAtual);
         }
         if (msgplayer2 != null) {
+        	timeoutPlayer2.start();
             enviarSolicitacaoDeJogada(msgplayer2, placarPlayer2, placarPlayer1, rodadaAtual);
         }  
     }
