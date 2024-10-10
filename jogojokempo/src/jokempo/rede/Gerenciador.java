@@ -124,8 +124,8 @@ public class Gerenciador implements Runnable{
     	Rodada resultadoplayer1 = jogo.jogar(jogadaplayer1, jogadaplayer2);
         Rodada resultadoplayer2 = (resultadoplayer1 == Rodada.VITORIA) ? Rodada.DERROTA : (resultadoplayer1 == Rodada.DERROTA ? Rodada.VITORIA : Rodada.EMPATE);
         enviaResultadoSv(resultadoplayer1, resultadoplayer2);
-        enviaResultado(msgplayer1, resultadoplayer1);
-        enviaResultado(msgplayer2, resultadoplayer2);
+        enviaResultado(msgplayer1, resultadoplayer1, jogadaplayer2);
+        enviaResultado(msgplayer2, resultadoplayer2, jogadaplayer1);
         timeoutPlayer1.reset();
         timeoutPlayer2.reset();
 	}
@@ -161,7 +161,8 @@ public class Gerenciador implements Runnable{
 	}
 	
 	//método que envia os resultados para os clientes
-	private void enviaResultado(PrintWriter msgplayer, Rodada resultado) {
+	private void enviaResultado(PrintWriter msgplayer, Rodada resultado, Jogada jogada) {
+		msgplayer.println(Mensagens.CONTRA + jogada);
     	if (resultado == Rodada.VITORIA) {
             msgplayer.println(Mensagens.VENCEU);
         } else if (resultado == Rodada.DERROTA) {
