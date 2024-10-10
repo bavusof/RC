@@ -42,7 +42,7 @@ public class Mensagens {
 	public static final String VCVENCEU = ("\n--------------- Você venceu o jogo! ---------------");
 	public static final String VCPERDEU = ("\n--------------- Você perdeu o jogo. ---------------");
 	public static final String ENDGAME = ("\nO jogo acabou, você será desconectado.");
-	public static final String INATIVIDADE = ("\nTempo limite esgotado. Você será desconectado por inatividade.");
+	public static final String INATIVIDADE = ("\nTempo limite para jogada válida esgotado. Você será desconectado por inatividade.");
 	public static final String INATIVIDADE2 = ("\nO seu oponente foi desconectado por inatividade.");
 	
 	//erros
