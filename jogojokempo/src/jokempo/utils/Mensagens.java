@@ -45,6 +45,7 @@ public class Mensagens {
 	public static final String INATIVIDADE = ("\nTempo limite para jogada válida esgotado. Você será desconectado por inatividade.");
 	public static final String INATIVIDADE2 = ("\nO seu oponente foi desconectado por inatividade.");
 	public static final String CONTRA = ("\nSeu oponente jogou: ");
+	public static final String DESCONEXAO = ("\nSeu adversário desconectou. Jogo encerrado.");
 	
 	//erros
 	public static final String X_SERVIDOR = ("\nErro no servidor: ");
