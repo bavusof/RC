@@ -62,9 +62,11 @@ public class Gerenciador implements Runnable{
         } catch (IOException e) {
             if (!clienteSocket.isClosed()) {
                 System.err.println(Mensagens.X_COMUN + e.getMessage());
+            	msgplayer1.println(Mensagens.DESCONEXAO);
+            	msgplayer2.println(Mensagens.DESCONEXAO);
             }
         } finally {
-        	ServidorJokempo.removeClient(clienteSocket);
+        	ServidorJokempo.removeBothClients();
         }
     }
 	
